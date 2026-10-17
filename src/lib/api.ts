@@ -1,4 +1,5 @@
-import type { ChatResponse } from "@/types";
+import type { ChatResponse, MedicinePrediction } from "@/types";
+import { supabase } from "@/lib/supabase";
 
 const EDGE_FUNCTION_SLUG = "tabletcare-chat";
 
@@ -35,13 +36,29 @@ export async function sendQuery(query: string): Promise<ChatResponse> {
   return data;
 }
 
-export async function fetchSuggestedMedicines(): Promise<string[]> {
-  return [
-    "What are the uses of Paracetamol?",
-    "What are the side effects of Cetirizine?",
-    "Tell me about Ibuprofen",
-    "What is Aspirin used for?",
-    "What are the precautions for Amoxicillin?",
-    "Tell me about Omeprazole",
-  ];
+let cachedPredictions: MedicinePrediction[] | null = null;
+
+export async function fetchMedicinePredictions(): Promise<MedicinePrediction[]> {
+  if (cachedPredictions) return cachedPredictions;
+
+  const { data, error } = await supabase
+    .from("medicines")
+    .select("name, active_ingredient, aliases");
+
+  if (error || !data) return [];
+
+  const predictions: MedicinePrediction[] = [];
+  for (const med of data) {
+    predictions.push({ name: med.name, active_ingredient: med.active_ingredient });
+    if (med.aliases) {
+      for (const alias of med.aliases) {
+        if (alias.toLowerCase() !== med.name.toLowerCase()) {
+          predictions.push({ name: alias, active_ingredient: med.active_ingredient });
+        }
+      }
+    }
+  }
+
+  cachedPredictions = predictions;
+  return predictions;
 }

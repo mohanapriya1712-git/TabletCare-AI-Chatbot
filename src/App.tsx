@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ShieldCheck } from "lucide-react";
-import type { ChatMessage, ChatResponse } from "@/types";
-import { sendQuery } from "@/lib/api";
+import type { ChatMessage, ChatResponse, MedicinePrediction } from "@/types";
+import { sendQuery, fetchMedicinePredictions } from "@/lib/api";
 import ChatHeader from "@/components/ChatHeader";
 import SearchBar from "@/components/SearchBar";
 import ChatMessageBubble from "@/components/ChatMessageBubble";
@@ -34,6 +34,7 @@ function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([createWelcomeMessage()]);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions] = useState<string[]>(INITIAL_SUGGESTIONS);
+  const [predictions, setPredictions] = useState<MedicinePrediction[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +47,10 @@ function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    fetchMedicinePredictions().then(setPredictions).catch(() => {});
+  }, []);
 
   const handleSend = useCallback(
     async (query: string) => {
@@ -154,7 +159,7 @@ function App() {
       {/* Search bar area */}
       <div className="border-t border-slate-100 bg-white/80 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3.5">
-          <SearchBar onSend={handleSend} disabled={isLoading} />
+          <SearchBar onSend={handleSend} disabled={isLoading} predictions={predictions} />
           <div className="flex items-center justify-center gap-1.5 mt-2.5">
             <ShieldCheck className="w-3.5 h-3.5 text-teal-500" strokeWidth={2} />
             <p className="text-xs text-slate-400">

@@ -32,3 +32,8 @@ export interface ChatMessage {
   isLoading?: boolean;
   isError?: boolean;
 }
+
+export interface MedicinePrediction {
+  name: string;
+  active_ingredient: string;
+}
