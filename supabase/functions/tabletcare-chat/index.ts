@@ -62,6 +62,8 @@ const MEDICINE_DOMAIN_KEYWORDS = [
   "generic", "brand name", "formulation", "syrup", "injection", "cream",
   "ointment", "allergic", "allergy", "fever", "headache", "infection",
   "ingredient", "pharmaceutical", "pharma", "medicinal", "explain",
+  "symptoms", "symptom", "treats", "treat", "treatment", "cure", "cures",
+  "relief", "relieve", "condition", "conditions", "indication", "indications",
 ];
 
 const INJECTION_DISGUISE_PATTERNS = [
@@ -230,6 +232,27 @@ async function findMedicine(
   return null;
 }
 
+function buildMedicineSummary(med: MedicineRow): string {
+  const usesList = med.common_uses.map((u) => `• ${u}`).join("\n");
+  const sideEffectsList = med.side_effects.map((s) => `• ${s}`).join("\n");
+  const precautionsList = med.precautions.map((p) => `• ${p}`).join("\n");
+
+  return [
+    `Here is verified information about ${med.name} (Active ingredient: ${med.active_ingredient}).`,
+    "",
+    `Conditions it treats / Common uses:`,
+    usesList,
+    "",
+    `Possible side effects:`,
+    sideEffectsList,
+    "",
+    `Precautions:`,
+    precautionsList,
+    "",
+    `For important warnings and full details, see the information card below. Always consult a doctor or pharmacist for personal medical advice.`,
+  ].join("\n");
+}
+
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
@@ -271,8 +294,7 @@ Deno.serve(async (req: Request) => {
       const med = await findMedicine(supabase, trimmedQuery);
       if (med) {
         response.medicine = med;
-        response.message =
-          "I can help with the medicine part of your question. However, I'm TabletCare AI and cannot help with the non-medicine part of your request. Please ask the unrelated part elsewhere.";
+        response.message = buildMedicineSummary(med);
         response.classification = "ALLOWED_MEDICINE_QUERY";
       }
       return new Response(JSON.stringify(response), {
@@ -305,7 +327,8 @@ Deno.serve(async (req: Request) => {
         const response: ValidatedResponse = {
           classification: "ALLOWED_MEDICINE_QUERY",
           message:
-            "I can help with the medicine-related part of your question. However, I'm TabletCare AI and cannot answer the non-medicine part. Please ask the unrelated part elsewhere.",
+            buildMedicineSummary(med) +
+            "\n\nNote: I could only answer the medicine-related part of your question. The non-medicine part was not answered.",
           medicine: med,
         };
         return new Response(JSON.stringify(response), {
@@ -331,7 +354,7 @@ Deno.serve(async (req: Request) => {
     if (medicine) {
       const response: ValidatedResponse = {
         classification: "ALLOWED_MEDICINE_QUERY",
-        message: `Here is verified information about ${medicine.name}.`,
+        message: buildMedicineSummary(medicine),
         medicine,
       };
       return new Response(JSON.stringify(response), {
